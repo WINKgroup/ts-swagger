@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.watcherExclude": {
+		},
+		"search.exclude": {
+			"build/**": true,
+			"package-lock.json": true,
+			"yarn.lock": true
+		}
+	}
+}
