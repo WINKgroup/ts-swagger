@@ -1,8 +1,8 @@
-const fs = require('fs');
-const generator = require('@babel/generator');
+const fs = require("fs");
 const { parse } = require("@babel/parser");
-const { getTypeScriptReader, getOpenApiWriter, makeConverter } = require('typeconv');
-const traverse = require('@babel/traverse').default;
+const traverse = require("@babel/traverse").default;
+const generate = require("@babel/generator");
+const { getTypeScriptReader, getOpenApiWriter, makeConverter } = require('typeconv'); 
 class TypescriptToSwagger {
     getAst(url: string): any {
         const fileContents = fs.readFileSync(url).toString();
@@ -28,7 +28,7 @@ class TypescriptToSwagger {
     }
 
     nodesToTypescript(nodes: Node[]): string {
-        return nodes.map(node => `export ${generator.default(node).code}`).join('\n');
+        return nodes.map(node => `export ${generate.default(node).code}`).join('\n');
     }
 
     typescriptToOpenApiJson(code: string, apiName: string, version: string): Promise<any> {
@@ -52,19 +52,11 @@ class TypescriptToSwagger {
     }
     
     createJson(json: Object, fileName: string) {
-        const convertedJson = JSON.stringify(json);
-        fs.writeFile(fileName, convertedJson, (err: Error) => {
+        fs.writeFile(fileName, json, (err: Error) => {
             if(err)
                 console.error(err.message);
         })
     }
 }
 
-const json = new TypescriptToSwagger();
-const swagger = json.generateSwagger('test/test.ts', 'Person API', 'v1').then(result => console.log(result));
-
-// json.createJson({
-//     prova: 'ciao',
-//     id: 5
-// }, 'swagger.json');
-
+module.exports = TypescriptToSwagger;

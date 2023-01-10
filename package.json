@@ -8,7 +8,7 @@
     "build/**/*"
   ],
   "scripts": {
-    "dev": "npx ts-node src/index.ts",
+    "dev": "npx ts-node --esm src/index.ts",
     "clean": "rm -rf build",
     "build": "yarn run clean && npx tsc",
     "playground": "npx ts-node-dev src/test.ts"
@@ -33,5 +33,9 @@
     "ts-node": "^10.9.1",
     "typeconv": "^1.8.0",
     "typescript": "^4.9.4"
+  },
+  "dependencies": {
+    "@types/babel__generator": "^7.6.4",
+    "@types/babel__traverse": "^7.18.3"
   }
 }
