@@ -63,5 +63,5 @@
     /* Advanced Options */
     "forceConsistentCasingInFileNames": true  /* Disallow inconsistently-cased references to the same file. */
   },
-  "exclude": ["src/test.ts", "node_modules", "build", "playground"]
+  "exclude": ["test/test.ts", "node_modules", "build", "playground"]
 }

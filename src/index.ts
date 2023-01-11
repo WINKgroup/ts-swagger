@@ -1,15 +1,15 @@
+const fs = require("fs");
+const { parse } = require("@babel/parser");
+const traverse = require("@babel/traverse").default;
+const generate = require("@babel/generator");
+const { getTypeScriptReader, getOpenApiWriter, makeConverter } = require('typeconv'); 
 class TypescriptToSwagger {
-
     getAst(url: string): any {
-        const fs = require('fs');
-        const { parse } = require("@babel/parser");
         const fileContents = fs.readFileSync(url).toString();
-
         return parse(fileContents, { sourceType: 'module', plugins: ["typescript"] });
     }
 
     searchInterestingNodes(ast: any, keyword: string, nodeType: string): Node[] {
-        const traverse = require('@babel/traverse').default;
         const nodes: Node[] = [];
 
         traverse(ast, {
@@ -28,12 +28,10 @@ class TypescriptToSwagger {
     }
 
     nodesToTypescript(nodes: Node[]): string {
-        const generator = require('@babel/generator');
-        return nodes.map(node => `export ${generator.default(node).code}`).join('\n');
+        return nodes.map(node => `export ${generate.default(node).code}`).join('\n');
     }
 
     typescriptToOpenApiJson(code: string, apiName: string, version: string): Promise<any> {
-        const { getTypeScriptReader, getOpenApiWriter, makeConverter } = require('typeconv');
         const reader = getTypeScriptReader();
         const writer = getOpenApiWriter({ format: 'json', title: apiName, version });
         const { convert } = makeConverter(reader, writer);
@@ -46,13 +44,19 @@ class TypescriptToSwagger {
 
     }
 
-    // return promise
     generateSwagger(url: string, apiName: string, version: string): Promise<any> {
         const ast = this.getAst(url);
         const nodes = this.searchInterestingNodes(ast, 'swagger', 'TSInterfaceDeclaration');
         const code = this.nodesToTypescript(nodes);
         return this.typescriptToOpenApiJson(code, apiName, version);
     }
-
-
+    
+    createJson(json: Object, fileName: string) {
+        fs.writeFile(fileName, json, (err: Error) => {
+            if(err)
+                console.error(err.message);
+        })
+    }
 }
+
+module.exports = TypescriptToSwagger;
