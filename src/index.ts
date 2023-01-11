@@ -1,22 +1,25 @@
+import { Method } from "./_types";
+
 const fs = require("fs");
 const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 const generate = require("@babel/generator");
-const { getTypeScriptReader, getOpenApiWriter, makeConverter } = require('typeconv'); 
+const { getTypeScriptReader, getOpenApiWriter, makeConverter } = require('typeconv');
+
 class TypescriptToSwagger {
     getAst(url: string): any {
         const fileContents = fs.readFileSync(url).toString();
         return parse(fileContents, { sourceType: 'module', plugins: ["typescript"] });
     }
 
-    searchInterestingNodes(ast: any, keyword: string, nodeType: string): Node[] {
+    searchInterestingNodes(ast: any): Node[] {
         const nodes: Node[] = [];
 
         traverse(ast, {
             enter(path: any) {
                 if (
-                    path.node.type === nodeType &&
-                    path.node.body.body[0].leadingComments?.some((comment: any) => comment.value.replace(/\s+/g, '').toLowerCase() === keyword)
+                    path.node.type === 'TSInterfaceDeclaration' &&
+                    path.node.body.body[0].leadingComments?.some((comment: any) => comment.value.replace(/\s+/g, '').toLowerCase() === 'swagger')
                 ) {
                     nodes.push(path.node);
                 }
@@ -25,6 +28,45 @@ class TypescriptToSwagger {
         );
 
         return nodes;
+    }
+
+    scanExpressApi(ast: any) {
+        const methods: Method[] = [];
+
+        traverse(ast, {
+            enter(path: any) {
+                if (path.node.type === 'ExpressionStatement' && (
+                    path.node.expression.callee.property.name === 'get' ||
+                    path.node.expression.callee.property.name === 'post' ||
+                    path.node.expression.callee.property.name === 'delete' ||
+                    path.node.expression.callee.property.name === 'put'
+                )) {
+                    let method: Method = {
+                        name: path.node.expression.callee.property.name,
+                        path: path.node.expression.arguments[0].quasis[0].value.raw
+                    };
+
+                    path.node.expression.arguments[1].body.body[0]?.leadingComments?.forEach((comment: any) => {
+                        if (comment.value.replace(/\s+/g, '').toLowerCase().startsWith('schema:')) {
+                            const interfaceName = comment.value.replace(/\s+/g, '').replace('schema:', '');
+                            method = { ...method, interfaceName };
+                        }
+                    });
+
+                    path.node.expression.arguments[1].body.innerComments?.forEach((comment: any) => {
+                        if (comment.value.replace(/\s+/g, '').toLowerCase().startsWith('schema:')) {
+                            const interfaceName = comment.value.replace(/\s+/g, '').replace('schema:', '');
+                            method = { ...method, interfaceName };
+                        }
+                    });
+
+                    methods.push(method);
+                }
+            }
+        },
+        );
+
+        return methods;
     }
 
     nodesToTypescript(nodes: Node[]): string {
@@ -46,14 +88,14 @@ class TypescriptToSwagger {
 
     generateSwagger(url: string, apiName: string, version: string): Promise<any> {
         const ast = this.getAst(url);
-        const nodes = this.searchInterestingNodes(ast, 'swagger', 'TSInterfaceDeclaration');
+        const nodes = this.searchInterestingNodes(ast);
         const code = this.nodesToTypescript(nodes);
         return this.typescriptToOpenApiJson(code, apiName, version);
     }
-    
+
     createJson(json: Object, fileName: string) {
         fs.writeFile(fileName, json, (err: Error) => {
-            if(err)
+            if (err)
                 console.error(err.message);
         })
     }
