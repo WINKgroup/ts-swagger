@@ -78,6 +78,7 @@ class TypescriptToSwagger {
             const newJson = {
                 [methodPath]: {
                     [method.name]: {
+                        tags: [method.interfaceName],
                         description: "Insert method description",
                         ...method.path.includes(':id') ? {
                             parameters: [{
