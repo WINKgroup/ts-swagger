@@ -60,13 +60,57 @@ class TypescriptToSwagger {
                         }
                     });
 
-                    methods.push(method);
+                    if (method.interfaceName) methods.push(method);
                 }
             }
         },
         );
 
         return methods;
+    }
+
+    createApiJson = (methods: Method[]): Object => {
+        let json = {};
+        methods.forEach(method => {
+            const methodPath = method.path.replace(':id', '{id}');
+
+            json = {
+                ...json,
+                [methodPath]: {
+                    [method.name]: {
+                        description: "Insert method description",
+                        ...method.path.includes(':id') ? {
+                            parameters: [{
+                                name: "id",
+                                in: "path",
+                                schema: {
+                                    type: "string",
+                                },
+                                required: true,
+                                description: `The ${method.interfaceName} id`
+                            }]
+                        } : {},
+                        responses: {
+                            200: {
+                                description: "Insert response description",
+                                content: {
+                                    "application/json": {
+                                        schema: {
+                                            type: `${method.name === 'get' ? 'array' : 'object'}`,
+                                            items: {
+                                                $ref: `#/components/schemas/${method.interfaceName}`
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        return json;
     }
 
     nodesToTypescript(nodes: Node[]): string {
@@ -86,11 +130,15 @@ class TypescriptToSwagger {
 
     }
 
-    generateSwagger(url: string, apiName: string, version: string): Promise<any> {
+    async generateSwagger(url: string, apiName: string, version: string): Promise<any> {
         const ast = this.getAst(url);
         const nodes = this.searchInterestingNodes(ast);
+        const methods = this.scanExpressApi(ast);
         const code = this.nodesToTypescript(nodes);
-        return this.typescriptToOpenApiJson(code, apiName, version);
+        const schema = await this.typescriptToOpenApiJson(code, apiName, version);
+        const swagger = await JSON.parse(schema.data);
+        swagger.paths = this.createApiJson(methods);
+        return JSON.stringify(swagger);
     }
 
     createJson(json: Object, fileName: string) {
