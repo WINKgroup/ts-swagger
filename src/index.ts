@@ -1,4 +1,5 @@
 import { Method } from "./_types";
+import _ from 'lodash';
 
 const fs = require("fs");
 const { parse } = require("@babel/parser");
@@ -74,8 +75,7 @@ class TypescriptToSwagger {
         methods.forEach(method => {
             const methodPath = method.path.replace(':id', '{id}');
 
-            json = {
-                ...json,
+            const newJson = {
                 [methodPath]: {
                     [method.name]: {
                         description: "Insert method description",
@@ -108,6 +108,8 @@ class TypescriptToSwagger {
                     }
                 }
             }
+
+            _.merge(json, newJson);
         });
 
         return json;
