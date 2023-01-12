@@ -1,18 +1,18 @@
-import { Method, SwgConfig } from "./_types";
+import { TsSwgMethod, TsSwgConfig } from "./_types";
 import _ from "lodash";
+import * as fs from 'fs';
 import * as parser from "@babel/parser";
 import traverse from "@babel/traverse";
+import generate from "@babel/generator";
+import * as t from '@babel/types';
 import {
   getTypeScriptReader,
   getOpenApiWriter,
   makeConverter
 } from "typeconv";
 
-const fs = require("fs");
-const generate = require("@babel/generator");
-
-class TypescriptToSwagger {
-  getAst(pathList: string[]): any {
+class TsSwagger {
+  getAst(pathList: string[]): parser.ParseResult<t.File> {
     const fileContents: string[] = [];
     pathList.forEach((path) => {
       const data = fs.readFileSync(path).toString();
@@ -25,8 +25,8 @@ class TypescriptToSwagger {
     });
   }
 
-  searchInterestingNodes(ast: any): Node[] {
-    const nodes: Node[] = [];
+  searchInterestingNodes(ast: parser.ParseResult<t.File>): t.Node[] {
+    const nodes: t.Node[] = [];
 
     traverse(ast, {
       enter(path: any) {
@@ -45,8 +45,8 @@ class TypescriptToSwagger {
     return nodes;
   }
 
-  scanExpressApi(ast: any) {
-    const methods: Method[] = [];
+  scanExpressApi(ast: parser.ParseResult<t.File>) {
+    const methods: TsSwgMethod[] = [];
 
     traverse(ast, {
       enter(path: any) {
@@ -57,7 +57,7 @@ class TypescriptToSwagger {
             path.node.expression.callee.property.name === "delete" ||
             path.node.expression.callee.property.name === "put")
         ) {
-          let method: Method = {
+          let method: TsSwgMethod = {
             name: path.node.expression.callee.property.name,
             path: path.node.expression.arguments[0].value,
           };
@@ -102,7 +102,7 @@ class TypescriptToSwagger {
     return methods;
   }
 
-  createApiJson = (methods: Method[]): Object => {
+  createApiJson = (methods: TsSwgMethod[]): object => {
     let json = {};
     methods.forEach((method) => {
       const methodPath = method.path.replace(":id", "{id}");
@@ -171,9 +171,9 @@ class TypescriptToSwagger {
     return json;
   };
 
-  nodesToTypescript(nodes: Node[]): string {
+  nodesToTypescript(nodes: t.Node[]): string {
     return nodes
-      .map((node) => `export ${generate.default(node).code}`)
+      .map((node) => `export ${generate(node).code}`)
       .join("\n");
   }
 
@@ -197,7 +197,7 @@ class TypescriptToSwagger {
     return convertData(code);
   }
 
-  async generateSwagger(config: SwgConfig): Promise<any> {
+  async getSwagger(config: TsSwgConfig): Promise<any> {
     const { pathList, apiName, version, description, servers } = config;
     const ast = this.getAst(pathList);
     const nodes = this.searchInterestingNodes(ast);
@@ -217,11 +217,11 @@ class TypescriptToSwagger {
     return JSON.stringify(swagger);
   }
 
-  createJson(json: Object, fileName: string) {
-    fs.writeFile(fileName, json, (err: Error) => {
+  createJson(json: object, fileName: string) {
+    fs.writeFile(fileName, JSON.stringify(json), (err: NodeJS.ErrnoException | null) => {
       if (err) console.error(err.message);
     });
   }
 }
 
-module.exports = TypescriptToSwagger;
+module.exports = TsSwagger;

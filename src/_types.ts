@@ -1,18 +1,18 @@
-export interface Method {
+export interface TsSwgMethod {
     name: 'get' | 'put' | 'post' | 'delete';
     path: string;
     interfaceName?: string;
 }
 
-export interface SwgConfig {
+export interface TsSwgConfig {
     pathList: string[];
     apiName: string;
     version: string;
     description?: string;
-    servers?: SwgConfigServer[];
+    servers?: TsSwgConfigServer[];
 }
 
-export interface SwgConfigServer {
+export interface TsSwgConfigServer {
     url: string;
     description?: string;
 }
