@@ -19,7 +19,6 @@ class TypescriptToSwagger {
       fileContents.push(data);
     });
 
-    console.log(fileContents.join(""));
     return parse(fileContents.join(""), {
       sourceType: "module",
       plugins: ["typescript"],
