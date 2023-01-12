@@ -108,18 +108,22 @@ class TsSwagger {
     let json = {};
 
     methods.forEach((method) => {
-      const methodPath = method.path.replace(":id", "{id}");
+      const id = method.path.includes(":") && 
+        method.path.substring(method.path.indexOf(':') + 1);
+      const methodPath = id 
+        ? method.path.replace(`:${id}`, `{${id}}`) 
+        : method.path;
 
       const newJson = {
         [methodPath]: {
           [method.name]: {
             tags: [method.interfaceName],
             description: "Insert method description",
-            ...(method.path.includes(":id")
+            ...(id
               ? {
                 parameters: [
                   {
-                    name: "id",
+                    name: `${id}`,
                     in: "path",
                     schema: {
                       type: "string",
