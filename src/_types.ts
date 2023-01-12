@@ -4,9 +4,15 @@ export interface Method {
     interfaceName?: string;
 }
 
-export interface SwaggerConfig {
-    interfaceUrls: string[];
-    apiUrls: string[];
+export interface SwgConfig {
+    pathList: string[];
     apiName: string;
     version: string;
+    description?: string;
+    servers?: SwgConfigServer[];
+}
+
+export interface SwgConfigServer {
+    url: string;
+    description?: string;
 }
