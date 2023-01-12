@@ -12,8 +12,10 @@ import {
 } from "typeconv";
 
 class TsSwagger {
+
   getAst(pathList: string[]): parser.ParseResult<t.File> {
     const fileContents: string[] = [];
+
     pathList.forEach((path) => {
       const data = fs.readFileSync(path).toString();
       fileContents.push(data);
@@ -104,6 +106,7 @@ class TsSwagger {
 
   createApiJson = (methods: TsSwgMethod[]): object => {
     let json = {};
+
     methods.forEach((method) => {
       const methodPath = method.path.replace(":id", "{id}");
 
@@ -197,7 +200,7 @@ class TsSwagger {
     return convertData(code);
   }
 
-  async getSwagger(config: TsSwgConfig): Promise<any> {
+  async getSwagger(config: TsSwgConfig): Promise<string> {
     const { pathList, apiName, version, description, servers } = config;
     const ast = this.getAst(pathList);
     const nodes = this.searchInterestingNodes(ast);
@@ -214,11 +217,11 @@ class TsSwagger {
     swagger.servers = servers;
     swagger.paths = this.createApiJson(methods);
 
-    return JSON.stringify(swagger);
+    return JSON.stringify(swagger, null, 2);
   }
 
-  createJson(json: object, fileName: string) {
-    fs.writeFile(fileName, JSON.stringify(json), (err: NodeJS.ErrnoException | null) => {
+  createJson(json: string, fileName: string) {
+    fs.writeFile(fileName, json, (err: NodeJS.ErrnoException | null) => {
       if (err) console.error(err.message);
     });
   }
