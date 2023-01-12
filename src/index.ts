@@ -12,6 +12,11 @@ import {
 } from "typeconv";
 
 class TsSwagger {
+  readonly tsSwgConfig: TsSwgConfig;
+
+  constructor(path: string) {
+    this.tsSwgConfig = JSON.parse(fs.readFileSync(path).toString());
+  }
 
   getAst(pathList: string[]): parser.ParseResult<t.File> {
     const fileContents: string[] = [];
@@ -200,8 +205,8 @@ class TsSwagger {
     return convertData(code);
   }
 
-  async getSwagger(config: TsSwgConfig): Promise<string> {
-    const { pathList, apiName, version, description, servers } = config;
+  async getSwagger(fileName?: string): Promise<string> {
+    const { pathList, apiName, version, description, servers } = this.tsSwgConfig;
     const ast = this.getAst(pathList);
     const nodes = this.searchInterestingNodes(ast);
     const methods = this.scanExpressApi(ast);
@@ -217,7 +222,12 @@ class TsSwagger {
     swagger.servers = servers;
     swagger.paths = this.createApiJson(methods);
 
-    return JSON.stringify(swagger, null, 2);
+    const json = JSON.stringify(swagger, null, 2);
+    if (fileName) {
+      this.createJson(json, fileName);
+    }
+
+    return json;
   }
 
   createJson(json: string, fileName: string) {
