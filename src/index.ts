@@ -62,7 +62,7 @@ class TsSwagger {
             path: path.node.expression.arguments[0].value,
           };
 
-          path.node.expression.arguments[1].body.body[0]?.leadingComments?.forEach(
+          path.node.expression.arguments[1]?.body?.body[0]?.leadingComments?.forEach(
             (comment: any) => {
               if (
                 comment.value
@@ -78,7 +78,7 @@ class TsSwagger {
             }
           );
 
-          path.node.expression.arguments[1].body.innerComments?.forEach(
+          path.node.expression.arguments[1]?.body?.innerComments?.forEach(
             (comment: any) => {
               if (
                 comment.value
