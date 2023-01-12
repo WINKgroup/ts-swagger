@@ -114,29 +114,48 @@ class TypescriptToSwagger {
             description: "Insert method description",
             ...(method.path.includes(":id")
               ? {
-                  parameters: [
-                    {
-                      name: "id",
-                      in: "path",
-                      schema: {
-                        type: "string",
-                      },
-                      required: true,
-                      description: `The ${method.interfaceName} id`,
+                parameters: [
+                  {
+                    name: "id",
+                    in: "path",
+                    schema: {
+                      type: "string",
                     },
-                  ],
-                }
+                    required: true,
+                    description: `The ${method.interfaceName} id`,
+                  },
+                ],
+              }
               : {}),
+            ...method.name === 'post' || method.name === 'put' ? {
+              requestBody: {
+                required: true,
+                content: {
+                  "application/json": {
+                    schema: {
+                      $ref: `#/components/schemas/${method.interfaceName}`
+                    }
+                  }
+                }
+              }
+            } : {},
             responses: {
               200: {
                 description: "Insert response description",
                 content: {
                   "application/json": {
-                    schema: {
-                      type: `${method.name === "get" ? "array" : "object"}`,
-                      items: {
-                        $ref: `#/components/schemas/${method.interfaceName}`,
-                      },
+                    ...method.name === 'get' && !method.path.includes(':id') ? {
+                      schema: {
+                        type: `${method.name === "get" ? "array" : "object"}`,
+                        items: {
+                          $ref: `#/components/schemas/${method.interfaceName}`,
+                        },
+                      }
+                    } : {
+                      schema: {
+                        $ref: `#/components/schemas/${method.interfaceName}`
+                      }
+
                     },
                   },
                 },
