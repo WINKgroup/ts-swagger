@@ -1,15 +1,15 @@
 import { Method, SwgConfig } from "./_types";
 import _ from "lodash";
-
-const fs = require("fs");
-const { parse } = require("@babel/parser");
-const traverse = require("@babel/traverse").default;
-const generate = require("@babel/generator");
-const {
+import * as parser from "@babel/parser";
+import traverse from "@babel/traverse";
+import {
   getTypeScriptReader,
   getOpenApiWriter,
-  makeConverter,
-} = require("typeconv");
+  makeConverter
+} from "typeconv";
+
+const fs = require("fs");
+const generate = require("@babel/generator");
 
 class TypescriptToSwagger {
   getAst(pathList: string[]): any {
@@ -19,7 +19,7 @@ class TypescriptToSwagger {
       fileContents.push(data);
     });
 
-    return parse(fileContents.join(""), {
+    return parser.parse(fileContents.join(""), {
       sourceType: "module",
       plugins: ["typescript"],
     });
