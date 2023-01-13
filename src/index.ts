@@ -61,6 +61,19 @@ class TsSwagger {
   scanExpressApi(ast: parser.ParseResult<t.File>) {
     const methods: TsSwgMethod[] = [];
 
+    const getCommentValue = (label: string, comment: string) => {
+      if (
+        comment
+          .replace(/\s+/g, "")
+          .toLowerCase()
+          .startsWith(label)
+      ) {
+        return comment
+          .replace(/\s+/g, "")
+          .replace(label, "");
+      }
+    }
+
     traverse(ast, {
       enter(path: any) {
         if (
@@ -77,33 +90,15 @@ class TsSwagger {
 
           path.node.expression.arguments[1]?.body?.body[0]?.leadingComments?.forEach(
             (comment: any) => {
-              if (
-                comment.value
-                  .replace(/\s+/g, "")
-                  .toLowerCase()
-                  .startsWith("schema:")
-              ) {
-                const interfaceName = comment.value
-                  .replace(/\s+/g, "")
-                  .replace("schema:", "");
-                method = { ...method, interfaceName };
-              }
+              const schema = getCommentValue("schema:", comment.value);
+              method = { ...method, ...schema ? { interfaceName: schema } : {} };
             }
           );
 
           path.node.expression.arguments[1]?.body?.innerComments?.forEach(
             (comment: any) => {
-              if (
-                comment.value
-                  .replace(/\s+/g, "")
-                  .toLowerCase()
-                  .startsWith("schema:")
-              ) {
-                const interfaceName = comment.value
-                  .replace(/\s+/g, "")
-                  .replace("schema:", "");
-                method = { ...method, interfaceName };
-              }
+              const schema = getCommentValue("schema:", comment.value);
+              method = { ...method, ...schema ? { interfaceName: schema } : {} };
             }
           );
 
