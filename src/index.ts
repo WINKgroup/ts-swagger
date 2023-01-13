@@ -5,6 +5,7 @@ import * as parser from "@babel/parser";
 import traverse from "@babel/traverse";
 import generate from "@babel/generator";
 import * as t from '@babel/types';
+import { JSONFileError, JSONPathError, ApiPathError } from "./_errors";
 import {
   getTypeScriptReader,
   getOpenApiWriter,
@@ -12,6 +13,15 @@ import {
 } from "typeconv";
 
 class TsSwagger {
+  readonly tsSwgConfig: TsSwgConfig;
+
+  constructor(path: string) {
+    try {
+      this.tsSwgConfig = JSON.parse(fs.readFileSync(path).toString());
+    } catch {
+      throw new JSONPathError("Invalid JSON Path");
+    }
+  }
 
   getAst(pathList: string[]): parser.ParseResult<t.File> {
     const fileContents: string[] = [];
@@ -204,8 +214,25 @@ class TsSwagger {
     return convertData(code);
   }
 
-  async getSwagger(config: TsSwgConfig): Promise<string> {
-    const { pathList, apiName, version, description, servers } = config;
+  checkConfig(tsSwgConfig: TsSwgConfig) {
+    const correctKeys = ['pathList', 'apiName', 'version'];
+
+    for(const key in correctKeys){
+      if(!tsSwgConfig.hasOwnProperty(correctKeys[key]))
+        throw new JSONFileError("Invalid JSON file");
+    }
+
+    for(const path in tsSwgConfig.pathList){
+      if(!fs.existsSync(tsSwgConfig.pathList[path]))
+        throw new ApiPathError("Invalid API Path");
+    }
+  }
+
+  async getSwagger(fileName?: string): Promise<string> {
+    this.checkConfig(this.tsSwgConfig);
+        
+
+    const { pathList, apiName, version, description, servers } = this.tsSwgConfig;
     const ast = this.getAst(pathList);
     const nodes = this.searchInterestingNodes(ast);
     const methods = this.scanExpressApi(ast);
@@ -221,7 +248,12 @@ class TsSwagger {
     swagger.servers = servers;
     swagger.paths = this.createApiJson(methods);
 
-    return JSON.stringify(swagger, null, 2);
+    const json = JSON.stringify(swagger, null, 2);
+    if (fileName) {
+      this.createJson(json, fileName);
+    }
+
+    return json;
   }
 
   createJson(json: string, fileName: string) {
