@@ -126,19 +126,19 @@ class TsSwagger {
     let json = {};
 
     methods.forEach((method) => {
-      const id = method.path.includes(":") &&
-        method.path.substring(method.path.indexOf(':') + 1);
+      const { name, path, interfaceName, description, responseDescription } = method;
+
+      const id = path.includes(":") &&
+        path.substring(path.indexOf(':') + 1);
       const methodPath = id
-        ? method.path.replace(`:${id}`, `{${id}}`)
-        : method.path;
+        ? path.replace(`:${id}`, `{${id}}`)
+        : path;
 
       const newJson = {
         [methodPath]: {
-          [method.name]: {
-            tags: [method.interfaceName],
-            description: `${method.description
-              ? method.description
-              : ""}`,
+          [name]: {
+            tags: [interfaceName],
+            description: `${description ? description : ""}`,
             ...(id
               ? {
                 parameters: [
@@ -149,18 +149,18 @@ class TsSwagger {
                       type: "string",
                     },
                     required: true,
-                    description: `The ${method.interfaceName} id`,
+                    description: `The ${interfaceName} id`,
                   },
                 ],
               }
               : {}),
-            ...method.name === 'post' || method.name === 'put' ? {
+            ...name === 'post' || name === 'put' ? {
               requestBody: {
                 required: true,
                 content: {
                   "application/json": {
                     schema: {
-                      $ref: `#/components/schemas/${method.interfaceName}`
+                      $ref: `#/components/schemas/${interfaceName}`
                     }
                   }
                 }
@@ -168,21 +168,19 @@ class TsSwagger {
             } : {},
             responses: {
               200: {
-                description: `${method.responseDescription
-                  ? method.responseDescription
-                  : ""}`,
+                description: `${responseDescription ? responseDescription : ""}`,
                 content: {
                   "application/json": {
-                    ...method.name === 'get' && !method.path.includes(':id') ? {
+                    ...name === 'get' && !path.includes(':id') ? {
                       schema: {
-                        type: `${method.name === "get" ? "array" : "object"}`,
+                        type: `${name === "get" ? "array" : "object"}`,
                         items: {
-                          $ref: `#/components/schemas/${method.interfaceName}`,
+                          $ref: `#/components/schemas/${interfaceName}`,
                         },
                       }
                     } : {
                       schema: {
-                        $ref: `#/components/schemas/${method.interfaceName}`
+                        $ref: `#/components/schemas/${interfaceName}`
                       }
 
                     },
@@ -242,7 +240,6 @@ class TsSwagger {
 
   async getSwagger(fileName?: string): Promise<string> {
     this.checkConfig(this.tsSwgConfig);
-
 
     const { pathList, apiName, version, description, servers } = this.tsSwgConfig;
     const ast = this.getAst(pathList);
