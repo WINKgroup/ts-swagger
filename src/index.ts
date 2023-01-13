@@ -5,6 +5,7 @@ import * as parser from "@babel/parser";
 import traverse from "@babel/traverse";
 import generate from "@babel/generator";
 import * as t from '@babel/types';
+import { JSONFileError, JSONPathError, ApiPathError } from "./_errors";
 import {
   getTypeScriptReader,
   getOpenApiWriter,
@@ -15,7 +16,11 @@ class TsSwagger {
   readonly tsSwgConfig: TsSwgConfig;
 
   constructor(path: string) {
-    this.tsSwgConfig = JSON.parse(fs.readFileSync(path).toString());
+    try {
+      this.tsSwgConfig = JSON.parse(fs.readFileSync(path).toString());
+    } catch {
+      throw new JSONPathError("Invalid JSON Path");
+    }
   }
 
   getAst(pathList: string[]): parser.ParseResult<t.File> {
@@ -205,7 +210,24 @@ class TsSwagger {
     return convertData(code);
   }
 
+  checkConfig(tsSwgConfig: TsSwgConfig) {
+    const correctKeys = ['pathList', 'apiName', 'version'];
+
+    for(const key in correctKeys){
+      if(!tsSwgConfig.hasOwnProperty(correctKeys[key]))
+        throw new JSONFileError("Invalid JSON file");
+    }
+
+    for(const path in tsSwgConfig.pathList){
+      if(!fs.existsSync(tsSwgConfig.pathList[path]))
+        throw new ApiPathError("Invalid API Path");
+    }
+  }
+
   async getSwagger(fileName?: string): Promise<string> {
+    this.checkConfig(this.tsSwgConfig);
+        
+
     const { pathList, apiName, version, description, servers } = this.tsSwgConfig;
     const ast = this.getAst(pathList);
     const nodes = this.searchInterestingNodes(ast);
