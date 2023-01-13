@@ -76,6 +76,18 @@ class TsSwagger {
       }
     }
 
+    const getMethodInfo = (comment: string) => {
+      const schema = getCommentValue("schema:", comment);
+      const description = getCommentValue("description:", comment, true);
+      const responseDescription = getCommentValue("response_description:", comment, true);
+
+      return {
+        ...schema ? { interfaceName: schema } : {},
+        ...description ? { description } : {},
+        ...responseDescription ? { responseDescription } : {}
+      };
+    }
+
     traverse(ast, {
       enter(path: any) {
         if (
@@ -92,29 +104,13 @@ class TsSwagger {
 
           path.node.expression.arguments[1]?.body?.body[0]?.leadingComments?.forEach(
             (comment: any) => {
-              const schema = getCommentValue("schema:", comment.value);
-              const description = getCommentValue("description:", comment.value, true);
-              const responseDescription = getCommentValue("response_description:", comment.value, true);
-              method = {
-                ...method,
-                ...schema ? { interfaceName: schema } : {},
-                ...description ? { description } : {},
-                ...responseDescription ? { responseDescription } : {}
-              };
+              _.merge(method, getMethodInfo(comment.value));
             }
           );
 
           path.node.expression.arguments[1]?.body?.innerComments?.forEach(
             (comment: any) => {
-              const schema = getCommentValue("schema:", comment.value);
-              const description = getCommentValue("description:", comment.value, true);
-              const responseDescription = getCommentValue("response_description:", comment.value, true);
-              method = {
-                ...method,
-                ...schema ? { interfaceName: schema } : {},
-                ...description ? { description } : {},
-                ...responseDescription ? { responseDescription } : {}
-              };
+              _.merge(method, getMethodInfo(comment.value));
             }
           );
 
