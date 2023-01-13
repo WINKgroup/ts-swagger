@@ -61,16 +61,18 @@ class TsSwagger {
   scanExpressApi(ast: parser.ParseResult<t.File>) {
     const methods: TsSwgMethod[] = [];
 
-    const getCommentValue = (label: string, comment: string) => {
+    const getCommentValue = (label: string, comment: string, spacing?: boolean) => {
       if (
         comment
           .replace(/\s+/g, "")
           .toLowerCase()
           .startsWith(label)
       ) {
-        return comment
-          .replace(/\s+/g, "")
-          .replace(label, "");
+        let value = spacing
+          ? comment
+          : comment.replace(/\s+/g, "");
+
+        return value.replace(label, "");
       }
     }
 
@@ -91,14 +93,28 @@ class TsSwagger {
           path.node.expression.arguments[1]?.body?.body[0]?.leadingComments?.forEach(
             (comment: any) => {
               const schema = getCommentValue("schema:", comment.value);
-              method = { ...method, ...schema ? { interfaceName: schema } : {} };
+              const description = getCommentValue("description:", comment.value, true);
+              const responseDescription = getCommentValue("response_description:", comment.value, true);
+              method = {
+                ...method,
+                ...schema ? { interfaceName: schema } : {},
+                ...description ? { description } : {},
+                ...responseDescription ? { responseDescription } : {}
+              };
             }
           );
 
           path.node.expression.arguments[1]?.body?.innerComments?.forEach(
             (comment: any) => {
               const schema = getCommentValue("schema:", comment.value);
-              method = { ...method, ...schema ? { interfaceName: schema } : {} };
+              const description = getCommentValue("description:", comment.value, true);
+              const responseDescription = getCommentValue("response_description:", comment.value, true);
+              method = {
+                ...method,
+                ...schema ? { interfaceName: schema } : {},
+                ...description ? { description } : {},
+                ...responseDescription ? { responseDescription } : {}
+              };
             }
           );
 
@@ -114,17 +130,19 @@ class TsSwagger {
     let json = {};
 
     methods.forEach((method) => {
-      const id = method.path.includes(":") && 
+      const id = method.path.includes(":") &&
         method.path.substring(method.path.indexOf(':') + 1);
-      const methodPath = id 
-        ? method.path.replace(`:${id}`, `{${id}}`) 
+      const methodPath = id
+        ? method.path.replace(`:${id}`, `{${id}}`)
         : method.path;
 
       const newJson = {
         [methodPath]: {
           [method.name]: {
             tags: [method.interfaceName],
-            description: "Insert method description",
+            description: `${method.description
+              ? method.description
+              : ""}`,
             ...(id
               ? {
                 parameters: [
@@ -154,7 +172,9 @@ class TsSwagger {
             } : {},
             responses: {
               200: {
-                description: "Insert response description",
+                description: `${method.responseDescription
+                  ? method.responseDescription
+                  : ""}`,
                 content: {
                   "application/json": {
                     ...method.name === 'get' && !method.path.includes(':id') ? {
@@ -213,20 +233,20 @@ class TsSwagger {
   checkConfig(tsSwgConfig: TsSwgConfig) {
     const correctKeys = ['pathList', 'apiName', 'version'];
 
-    for(const key in correctKeys){
-      if(!tsSwgConfig.hasOwnProperty(correctKeys[key]))
+    for (const key in correctKeys) {
+      if (!tsSwgConfig.hasOwnProperty(correctKeys[key]))
         throw new JSONFileError("Invalid JSON file");
     }
 
-    for(const path in tsSwgConfig.pathList){
-      if(!fs.existsSync(tsSwgConfig.pathList[path]))
+    for (const path in tsSwgConfig.pathList) {
+      if (!fs.existsSync(tsSwgConfig.pathList[path]))
         throw new ApiPathError("Invalid API Path");
     }
   }
 
   async getSwagger(fileName?: string): Promise<string> {
     this.checkConfig(this.tsSwgConfig);
-        
+
 
     const { pathList, apiName, version, description, servers } = this.tsSwgConfig;
     const ast = this.getAst(pathList);

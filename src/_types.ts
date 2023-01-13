@@ -2,6 +2,8 @@ export interface TsSwgMethod {
     name: 'get' | 'put' | 'post' | 'delete';
     path: string;
     interfaceName?: string;
+    description?: string;
+    responseDescription?: string;
 }
 
 export interface TsSwgConfig {
