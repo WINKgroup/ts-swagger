@@ -9,7 +9,8 @@ import { JSONFileError, JSONPathError, ApiPathError } from "./_errors";
 import {
   getTypeScriptReader,
   getOpenApiWriter,
-  makeConverter
+  makeConverter,
+  ConversionResult
 } from "typeconv";
 
 class TsSwagger {
@@ -198,7 +199,7 @@ class TsSwagger {
     code: string,
     apiName: string,
     version: string
-  ): Promise<any> {
+  ): Promise<ConversionResult<string>> {
     const reader = getTypeScriptReader();
     const writer = getOpenApiWriter({
       format: "json",
