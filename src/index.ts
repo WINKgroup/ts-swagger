@@ -1,4 +1,4 @@
-import { TsSwgMethod, TsSwgConfig, TsSwgSchema, TsSwgVariable } from "./_types";
+import { TsSwgMethod, TsSwgConfig, TsSwgSchemaData, TsSwgVariable } from "./_types";
 import _ from "lodash";
 import * as fs from 'fs';
 import * as parser from "@babel/parser";
@@ -198,42 +198,61 @@ class TsSwagger {
     return json;
   };
 
-  nodesToTypescript(nodes: t.TSInterfaceDeclaration[]): string {
-    const schema: TsSwgSchema[] = [];
+  getDataForSchema(nodes: t.TSInterfaceDeclaration[]): TsSwgSchemaData[] {
+    const schemaData: TsSwgSchemaData[] = [];
+
+    const getVariableType = (type: string) => {
+      switch (type) {
+        case "TSBooleanKeyword":
+          return "boolean"
+        case "TSNumberKeyword":
+          return "number"
+        case "TSArrayType":
+          return "array"
+        case "TSObjectKeyword":
+          return "object"
+        case "TSStringKeyword":
+        default:
+          return "string"
+      }
+    }
 
     nodes.forEach(node => {
       const variables: TsSwgVariable[] = [];
       node.body.body.forEach(body => {
         if ("key" in body) {
           if ("name" in body.key) {
-            let type = "string";
-            switch (body.typeAnnotation?.typeAnnotation.type) {
-              case "TSStringKeyword":
-                type = "string"
-                break;
-              case "TSBooleanKeyword":
-                type = "boolean"
-                break;
-              case "TSNumberKeyword":
-                type = "number"
-                break;
-              default:
-                type = "string"
-                break;
+            let type = getVariableType(body.typeAnnotation?.typeAnnotation.type as string);
+            let arrayType: string | undefined = undefined;
+            if (type === 'array') {
+              if (body.typeAnnotation?.typeAnnotation && "elementType" in body.typeAnnotation?.typeAnnotation)
+                arrayType = getVariableType(body.typeAnnotation?.typeAnnotation.elementType.type);
             }
-            variables.push({ name: body.key.name, optional: body.optional || false, type })
+
+            variables.push(
+              {
+                name: body.key.name,
+                optional: body.optional || false,
+                type: arrayType ? arrayType : type,
+                array: !!arrayType
+              }
+            )
           }
         }
       });
 
-      schema.push({
+      schemaData.push({
         interfaceName: node.id.name,
         variables
       });
     })
 
-    console.log(schema[0].variables);
+    console.log(schemaData[0].variables);
 
+    return schemaData;
+  }
+
+  nodesToTypescript(nodes: t.TSInterfaceDeclaration[]): string {
     return nodes
       .map((node) => `export ${generate(node).code}`)
       .join("\n");

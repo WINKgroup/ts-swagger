@@ -3,12 +3,8 @@ export interface User {
     name: string;
     surname: string;
     age?: number;
-    prova: boolean;
 }
-enum Prova {
-    PROVA = "prova",
-    CIAO = "ciao"
-}
+
 export interface Animal {
     // swagger
     name: string;
