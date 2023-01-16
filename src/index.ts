@@ -1,4 +1,4 @@
-import { TsSwgMethod, TsSwgConfig } from "./_types";
+import { TsSwgMethod, TsSwgConfig, TsSwgSchema, TsSwgVariable } from "./_types";
 import _ from "lodash";
 import * as fs from 'fs';
 import * as parser from "@babel/parser";
@@ -38,8 +38,8 @@ class TsSwagger {
     });
   }
 
-  searchInterestingNodes(ast: parser.ParseResult<t.File>): t.Node[] {
-    const nodes: t.Node[] = [];
+  searchInterestingNodes(ast: parser.ParseResult<t.File>): t.TSInterfaceDeclaration[] {
+    const nodes: t.TSInterfaceDeclaration[] = [];
 
     traverse(ast, {
       enter(path: any) {
@@ -198,7 +198,42 @@ class TsSwagger {
     return json;
   };
 
-  nodesToTypescript(nodes: t.Node[]): string {
+  nodesToTypescript(nodes: t.TSInterfaceDeclaration[]): string {
+    const schema: TsSwgSchema[] = [];
+
+    nodes.forEach(node => {
+      const variables: TsSwgVariable[] = [];
+      node.body.body.forEach(body => {
+        if ("key" in body) {
+          if ("name" in body.key) {
+            let type = "string";
+            switch (body.typeAnnotation?.typeAnnotation.type) {
+              case "TSStringKeyword":
+                type = "string"
+                break;
+              case "TSBooleanKeyword":
+                type = "boolean"
+                break;
+              case "TSNumberKeyword":
+                type = "number"
+                break;
+              default:
+                type = "string"
+                break;
+            }
+            variables.push({ name: body.key.name, optional: body.optional || false, type })
+          }
+        }
+      });
+
+      schema.push({
+        interfaceName: node.id.name,
+        variables
+      });
+    })
+
+    console.log(schema[0].variables);
+
     return nodes
       .map((node) => `export ${generate(node).code}`)
       .join("\n");
@@ -273,3 +308,6 @@ class TsSwagger {
 }
 
 module.exports = TsSwagger;
+
+const tsswg = new TsSwagger("./src/config.json");
+tsswg.getSwagger().then(result => console.log(""));
