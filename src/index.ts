@@ -250,7 +250,7 @@ class TsSwagger {
     return schemasData;
   }
 
-  generateBaseJson(schemasData: TsSwgSchemasData[], apiName: string, version: string, description?: string) {
+  generateBasicJson(schemasData: TsSwgSchemasData[], apiName: string, version: string, description?: string) {
     let json = {
       openapi: "3.0.0",
       info: {
@@ -340,7 +340,7 @@ class TsSwagger {
     const nodes = this.searchInterestingNodes(ast);
     const methods = this.scanExpressApi(ast);
     const schemasData = this.getDataForSchemas(nodes);
-    const swagger = this.generateBaseJson(schemasData, apiName, version, description);
+    const swagger = this.generateBasicJson(schemasData, apiName, version, description);
     swagger.servers = servers;
     swagger.paths = this.createApiJson(methods);
 
