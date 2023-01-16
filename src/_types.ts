@@ -6,16 +6,16 @@ export interface TsSwgMethod {
     responseDescription?: string;
 }
 
-export interface TsSwgSchemaData {
+export interface TsSwgSchemasData {
     interfaceName: string;
-    variables?: TsSwgVariable[];
+    variables: TsSwgVariable[];
 }
 
 export interface TsSwgVariable {
-    name?: string;
-    type?: string;
-    optional?: boolean | null;
-    array?: boolean;
+    name: string;
+    type: string;
+    optional: boolean | null;
+    array: boolean;
 }
 
 export interface TsSwgConfig {
