@@ -361,6 +361,3 @@ class TsSwagger {
 }
 
 module.exports = TsSwagger;
-
-const tsswg = new TsSwagger("./src/config.json");
-console.log(tsswg.getSwagger("./src/swagger.json"));
