@@ -10,21 +10,26 @@ yarn add @winkgroup/ts-swagger
 
 ## Usage
 
-In order to be properly used, Ts-Swagger requires a **configuration file** with the paths containing all of your interfaces/API, along with some other info such as the documentation title and version.
+In order to be properly used, Ts-Swagger requires a **configuration file** with the paths containing all of your interfaces/API, along with some other info such as the documentation title (apiName) and version. Other optional info is the description and list of servers.
 
 This file **must be placed at the root** of your project folder.
 
 ```JSON
 {
-    "InterfacesPath": [
+    "pathList": [
         "./model/User.ts",
-        "./model/Cart.ts"
-    ],
-    "ApiPath": [
+        "./model/Cart.ts",
         "./routes/api/user.js"
     ],
-    "title": "",
-    "version": ""
+    "apiName": "",
+    "version": "",
+    "description": "",
+    "servers": [
+        {
+            "url": "http://localhost:3000/",
+            "description": "Staging"
+        },
+    ]
 }
 ```
 
@@ -56,6 +61,17 @@ Your **APIs** will also need a comment that specifies **which interface they're 
 ```js
 app.get('/users', function(req, res) {
     // schema: User
+    res.send(Users);
+});
+```
+
+Other optional comments are the description of the API and its response.
+
+```js
+app.get('/users', function(req, res) {
+    // schema: User
+    // description: Get all users
+    // response_description: Array of users
     res.send(Users);
 });
 ```

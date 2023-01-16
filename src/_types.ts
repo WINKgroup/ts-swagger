@@ -6,6 +6,18 @@ export interface TsSwgMethod {
     responseDescription?: string;
 }
 
+export interface TsSwgSchemasData {
+    interfaceName: string;
+    variables: TsSwgVariable[];
+}
+
+export interface TsSwgVariable {
+    name: string;
+    type: string;
+    optional: boolean | null;
+    array: boolean;
+}
+
 export interface TsSwgConfig {
     pathList: string[];
     apiName: string;
