@@ -2,7 +2,7 @@
 
 Ts-Swagger is a Javascript library that converts Typescript interfaces and Express APIs into OpenAPI/Swagger JSON.
 
-Ts-swagger library scans the Typescript files of interest and converts interfaces and APIs marked with specific comments. As a result it provides a JSON composed according to the OpenAPI 3 specification. Optionally generate a file with a .json extension in the project root.
+Ts-Swagger library scans the Typescript files of interest and converts interfaces and APIs marked with specific comments. As a result it provides a JSON composed according to the OpenAPI 3 specification. Optionally generate a file with a .json extension in the project root.
 
 ## Installation
 
