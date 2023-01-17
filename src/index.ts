@@ -360,4 +360,4 @@ class TsSwagger {
 
 }
 
-module.exports = TsSwagger;
+export { TsSwagger }

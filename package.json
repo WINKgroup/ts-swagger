@@ -1,5 +1,5 @@
 {
-  "name": "@winkgroup/ts-to-openapi",
+  "name": "@winkgroup/ts-swagger",
   "version": "1.0.0",
   "description": "library to transform typescript declarations into OpenAPI document",
   "main": "./build/index.js",
@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "npx ts-node --esm src/index.ts",
     "clean": "rm -rf build",
-    "build": "yarn run clean && npx tsc",
+    "build": "npm run clean && npx tsc",
     "playground": "npx ts-node-dev src/test.ts"
   },
   "repository": {

@@ -5,7 +5,7 @@ Ts-Swagger is a Javascript library that converts Typescript interfaces and Expre
 ## Installation
 
 ```bash
-yarn add @winkgroup/ts-swagger
+npm i @winkgroup/ts-swagger
 ```
 
 ## Usage
@@ -79,7 +79,7 @@ app.get('/users', function(req, res) {
 The library exposes a method called **getSwagger()** that returns the Swagger JSON. If a **filename** is provided as an argument, a new file containing the JSON will be created in the root of your project.
 
 ```js
-const TsSwagger = require("@winkgroup/ts-swagger");
+import { TsSwagger } from "@winkgroup/ts-swagger";
 
 // Configuration file path must be passed inside class constructor
 const tsswg = new TsSwagger("../tsswagger.config.json");
