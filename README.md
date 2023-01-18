@@ -78,6 +78,17 @@ app.get('/users', function(req, res) {
 });
 ```
 
+With the following syntax you can also add the description of other status codes other than 200.
+
+```js
+app.get('/users/:userId', function(req, res) {
+    // schema: User
+    // {404}: Not found
+    // {500}: Some server error
+    res.send(User);
+});
+```
+
 The library exposes a method called **getSwagger()** that returns the Swagger JSON. If a **filename** is provided as an argument, a new file containing the JSON will be created in the root of your project.
 
 ```js
