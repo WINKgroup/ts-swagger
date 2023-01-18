@@ -15,15 +15,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/WINKgroup/ts-to-openapi.git"
+    "url": "git+https://github.com/WINKgroup/ts-swagger.git"
   },
   "keywords": [],
   "author": "winksrl",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/WINKgroup/ts-to-openapi/issues"
+    "url": "https://github.com/WINKgroup/ts-swagger/issues"
   },
-  "homepage": "https://github.com/WINKgroup/ts-to-openapi#readme",
+  "homepage": "https://github.com/WINKgroup/ts-swagger#readme",
   "dependencies": {
     "@babel/parser": "^7.20.7",
     "@babel/traverse": "^7.20.10",
