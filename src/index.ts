@@ -91,13 +91,15 @@ class TsSwagger {
       const schema = getCommentValue("schema:", comment);
       const description = getCommentValue("description:", comment, true);
       const responseDescription = getCommentValue("response_description:", comment, true);
+      const errorInterfaceName = getCommentValue("error_schema:", comment);
       const status = getResStatus(comment);
 
       return {
         ...schema ? { interfaceName: schema } : {},
         ...description ? { description } : {},
         ...responseDescription ? { responseDescription } : {},
-        ...status ? { resStates: status } : {}
+        ...status ? { resStates: status } : {},
+        ...errorInterfaceName ? { errorInterfaceName } : {}
       };
     }
 
@@ -145,8 +147,31 @@ class TsSwagger {
         interfaceName,
         description,
         responseDescription,
-        resStates
+        resStates,
+        errorInterfaceName
       } = method;
+
+      const responseObj = _.cloneDeep(resStates);
+
+      if (errorInterfaceName) {
+        const content = {
+          content: {
+            "application/json": {
+              schema: {
+                $ref: `#/components/schemas/${errorInterfaceName}`
+              }
+            }
+          }
+        };
+        let obj = {};
+        for (const key in resStates) {
+          obj = {
+            ...obj,
+            [key]: content
+          }
+        }
+        _.merge(responseObj, obj);
+      }
 
       const id = path.includes(":") &&
         path.substring(path.indexOf(':') + 1);
@@ -187,7 +212,7 @@ class TsSwagger {
               }
             } : {},
             responses: {
-              ...resStates ? resStates : {},
+              ...responseObj ? responseObj : {},
               200: {
                 description: `${responseDescription ? responseDescription : ""}`,
                 content: {
@@ -231,7 +256,6 @@ class TsSwagger {
           return "array"
         case "TSObjectKeyword":
           return "object"
-        case "TSStringKeyword":
         default:
           return "string"
       }
