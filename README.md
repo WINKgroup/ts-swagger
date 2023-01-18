@@ -78,7 +78,7 @@ app.get('/users', function(req, res) {
 });
 ```
 
-With the following syntax you can also add the description of status codes other than 200 and if you want with an optional comment, you can provide a reference to the Typesccript interface that describes the related response.
+With the following syntax you can also add the description of status codes other than 200 and if you want with an optional comment, you can provide a reference to the Typescript interface that describes the related response.
 
 ```js
 app.get('/users/:userId', function(req, res) {
