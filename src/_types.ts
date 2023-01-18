@@ -4,6 +4,7 @@ export interface TsSwgMethod {
     interfaceName?: string;
     description?: string;
     responseDescription?: string;
+    resStates?: { [key: string]: { description: string } }
 }
 
 export interface TsSwgSchemasData {

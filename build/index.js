@@ -49,7 +49,7 @@ var TsSwagger = /** @class */ (function () {
             var json = {};
             methods.forEach(function (method) {
                 var _a, _b;
-                var name = method.name, path = method.path, interfaceName = method.interfaceName, description = method.description, responseDescription = method.responseDescription;
+                var name = method.name, path = method.path, interfaceName = method.interfaceName, description = method.description, responseDescription = method.responseDescription, resStates = method.resStates;
                 var id = path.includes(":") &&
                     path.substring(path.indexOf(':') + 1);
                 var methodPath = id
@@ -82,11 +82,10 @@ var TsSwagger = /** @class */ (function () {
                                     }
                                 }
                             }
-                        } : {}), { responses: {
-                                200: {
+                        } : {}), { responses: __assign(__assign({}, resStates ? resStates : {}), { 200: {
                                     description: "".concat(responseDescription ? responseDescription : ""),
                                     content: {
-                                        "application/json": __assign({}, name === 'get' && !path.includes(':id') ? {
+                                        "application/json": __assign({}, name === 'get' && !path.includes(':') ? {
                                             schema: {
                                                 type: "".concat(name === "get" ? "array" : "object"),
                                                 items: {
@@ -99,8 +98,7 @@ var TsSwagger = /** @class */ (function () {
                                             }
                                         }),
                                     },
-                                },
-                            } }),
+                                } }) }),
                         _b),
                     _a);
                 lodash_1.default.merge(json, newJson);
@@ -153,11 +151,24 @@ var TsSwagger = /** @class */ (function () {
                 return value.replace(label, "");
             }
         };
+        var getResStatus = function (comment) {
+            var _a;
+            var status = comment.match(/\{(.*?)\}/);
+            if (status) {
+                return _a = {},
+                    _a[status[1]] = {
+                        description: getCommentValue("{".concat(status[1], "}:"), comment, true) || ''
+                    },
+                    _a;
+            }
+            return;
+        };
         var getMethodInfo = function (comment) {
             var schema = getCommentValue("schema:", comment);
             var description = getCommentValue("description:", comment, true);
             var responseDescription = getCommentValue("response_description:", comment, true);
-            return __assign(__assign(__assign({}, schema ? { interfaceName: schema } : {}), description ? { description: description } : {}), responseDescription ? { responseDescription: responseDescription } : {});
+            var status = getResStatus(comment);
+            return __assign(__assign(__assign(__assign({}, schema ? { interfaceName: schema } : {}), description ? { description: description } : {}), responseDescription ? { responseDescription: responseDescription } : {}), status ? { resStates: status } : {});
         };
         (0, traverse_1.default)(ast, {
             enter: function (path) {

@@ -75,15 +75,29 @@ class TsSwagger {
       }
     }
 
+    const getResStatus = (comment: string) => {
+      const status = comment.match(/\{(.*?)\}/);
+      if (status) {
+        return {
+          [status[1]]: {
+            description: getCommentValue(`{${status[1]}}:`, comment, true) || ''
+          }
+        }
+      }
+      return;
+    }
+
     const getMethodInfo = (comment: string) => {
       const schema = getCommentValue("schema:", comment);
       const description = getCommentValue("description:", comment, true);
       const responseDescription = getCommentValue("response_description:", comment, true);
+      const status = getResStatus(comment);
 
       return {
         ...schema ? { interfaceName: schema } : {},
         ...description ? { description } : {},
-        ...responseDescription ? { responseDescription } : {}
+        ...responseDescription ? { responseDescription } : {},
+        ...status ? { resStates: status } : {}
       };
     }
 
@@ -125,7 +139,14 @@ class TsSwagger {
     let json = {};
 
     methods.forEach((method) => {
-      const { name, path, interfaceName, description, responseDescription } = method;
+      const {
+        name,
+        path,
+        interfaceName,
+        description,
+        responseDescription,
+        resStates
+      } = method;
 
       const id = path.includes(":") &&
         path.substring(path.indexOf(':') + 1);
@@ -166,11 +187,12 @@ class TsSwagger {
               }
             } : {},
             responses: {
+              ...resStates ? resStates : {},
               200: {
                 description: `${responseDescription ? responseDescription : ""}`,
                 content: {
                   "application/json": {
-                    ...name === 'get' && !path.includes(':id') ? {
+                    ...name === 'get' && !path.includes(':') ? {
                       schema: {
                         type: `${name === "get" ? "array" : "object"}`,
                         items: {
@@ -181,7 +203,6 @@ class TsSwagger {
                       schema: {
                         $ref: `#/components/schemas/${interfaceName}`
                       }
-
                     },
                   },
                 },
