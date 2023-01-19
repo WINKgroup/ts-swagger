@@ -261,6 +261,22 @@ class TsSwagger {
       }
     };
 
+    const isDate = (body: t.TSTypeElement) => {
+      return (
+        body.typeAnnotation?.typeAnnotation.type === "TSTypeReference" &&
+        "typeName" in body.typeAnnotation?.typeAnnotation &&
+        "name" in body.typeAnnotation?.typeAnnotation.typeName &&
+        body.typeAnnotation?.typeAnnotation.typeName.name === "Date"
+      ) ||
+        (
+          body.typeAnnotation?.typeAnnotation &&
+          "elementType" in body.typeAnnotation?.typeAnnotation &&
+          "typeName" in body.typeAnnotation?.typeAnnotation.elementType &&
+          "name" in body.typeAnnotation?.typeAnnotation.elementType.typeName &&
+          body.typeAnnotation?.typeAnnotation.elementType.typeName.name === "Date"
+        )
+    }
+
     nodes.forEach(node => {
       const variables: TsSwgVariable[] = [];
       node.body.body.forEach(body => {
@@ -278,7 +294,8 @@ class TsSwagger {
                 name: body.key.name,
                 optional: body.optional || false,
                 type: arrayType ? arrayType : type,
-                array: !!arrayType
+                array: !!arrayType,
+                ...isDate(body) ? { format: "date-time" } : {}
               }
             );
 
@@ -322,7 +339,8 @@ class TsSwagger {
               [variable.name]: {
                 items: {
                   title: `${interfaceName}.${variable.name}.[]`,
-                  type: variable.type
+                  type: variable.type,
+                  format: variable.format
                 },
                 title: `${interfaceName}.${variable.name}`,
                 type: "array"
@@ -335,7 +353,8 @@ class TsSwagger {
             ...variable.name ? {
               [variable.name]: {
                 title: `${interfaceName}.${variable.name}`,
-                type: variable.type
+                type: variable.type,
+                format: variable.format
               }
             } : {}
           }

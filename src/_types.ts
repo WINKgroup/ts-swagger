@@ -18,6 +18,7 @@ export interface TsSwgVariable {
     type: string;
     optional: boolean | null;
     array: boolean;
+    format?: string;
 }
 
 export interface TsSwgConfig {
