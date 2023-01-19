@@ -17,7 +17,16 @@
     "type": "git",
     "url": "git+https://github.com/WINKgroup/ts-swagger.git"
   },
-  "keywords": [],
+  "keywords": [
+    "openapi",
+    "swagger",
+    "typescript",
+    "api",
+    "interface",
+    "express",
+    "crud",
+    "schemas"
+  ],
   "author": "winksrl",
   "license": "MIT",
   "bugs": {
