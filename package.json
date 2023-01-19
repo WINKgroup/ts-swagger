@@ -1,6 +1,6 @@
 {
   "name": "@winkgroup/ts-swagger",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "library to transform typescript declarations into OpenAPI document",
   "main": "./build/index.js",
   "types": "./build/index.d.ts",
