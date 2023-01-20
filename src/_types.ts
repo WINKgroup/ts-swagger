@@ -6,6 +6,13 @@ export interface TsSwgMethod {
     responseDescription?: string;
     resStates?: { [key: string]: { description: string } };
     errorInterfaceName?: string;
+    queryParameters: TsSwgQueryParameter[];
+}
+
+export interface TsSwgQueryParameter {
+    name: string;
+    type: string;
+    description?: string;
 }
 
 export interface TsSwgSchemasData {

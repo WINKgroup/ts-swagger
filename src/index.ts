@@ -65,7 +65,7 @@ class TsSwagger {
       if (status) {
         return {
           [status[1]]: {
-            description: getCommentValue(`{${status[1]}}:`, comment, true) || ''
+            description: getCommentValue(`{${status[1]}}`, comment, true) || ''
           }
         }
       }
@@ -78,8 +78,21 @@ class TsSwagger {
       return spacing ? result : result.replace(/\s+/g, "");
     };
 
+    const getQueryParameter = (comment: string) => {
+      const name = comment.match(/\{(.*?)\}/);
+      const type = comment.match(/\[(.*?)\]/);
+
+      if (name && type) {
+        return {
+          name: name[1],
+          type: type[1],
+          description: getCommentValue(`[${type[1]}]`, comment, true) || ''
+        }
+      }
+    };
+
     const getMethodInfo = (rows: string[]) => {
-      let methodInfo: TsSwgMethod = { name: "", path: "" };
+      let methodInfo: TsSwgMethod = { name: "", path: "", queryParameters: [] };
       for (const index in rows) {
         const row = rows[index];
         if (row.includes("@schema"))
@@ -87,10 +100,10 @@ class TsSwagger {
             ...methodInfo,
             interfaceName: getCommentValue("@schema ", row)
           };
-        else if (row.includes("@method"))
+        else if (row.includes("@request"))
           methodInfo = {
             ...methodInfo,
-            name: getCommentValue("@method ", row).toLowerCase()
+            name: getCommentValue("@request ", row).toLowerCase()
           };
         else if (row.includes("@route"))
           methodInfo = {
@@ -113,7 +126,11 @@ class TsSwagger {
             errorInterfaceName: getCommentValue("@error_schema ", row)
           };
         else if (row.includes("@status_code"))
-          _.merge(methodInfo, { resStates: getResStatus(row) })
+          _.merge(methodInfo, { resStates: getResStatus(row) });
+        else if (row.includes("@query_parameter")) {
+          const queryParameter = getQueryParameter(row);
+          queryParameter && methodInfo.queryParameters?.push(queryParameter);
+        }
       }
 
       return methodInfo;
@@ -162,7 +179,8 @@ class TsSwagger {
         description,
         responseDescription,
         resStates,
-        errorInterfaceName
+        errorInterfaceName,
+        queryParameters
       } = method;
 
       const responseObj = _.cloneDeep(resStates);
@@ -193,6 +211,17 @@ class TsSwagger {
         ? path.replace(`:${id}`, `{${id}}`)
         : path;
 
+      const parameters = queryParameters.map(qp => {
+        return {
+          in: "query",
+          name: qp.name,
+          schema: {
+            type: qp.type === "number" ? qp.type : "string"
+          },
+          description: qp.description
+        }
+      });
+
       const newJson = {
         [methodPath]: {
           [name]: {
@@ -210,9 +239,10 @@ class TsSwagger {
                     required: true,
                     description: `The ${interfaceName} id`,
                   },
+                  ...parameters
                 ],
               }
-              : {}),
+              : { parameters }),
             ...name === 'post' || name === 'put' ? {
               requestBody: {
                 required: true,
