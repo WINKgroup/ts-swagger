@@ -46,7 +46,7 @@ class TsSwagger {
           path.node.type === "TSInterfaceDeclaration" &&
           path.node.body.body[0].leadingComments?.some(
             (comment: any) =>
-              comment.value.replace(/\s+/g, "").toLowerCase() === "swagger"
+              comment.value.includes("@tsswagger")
           )
         ) {
           nodes.push(path.node);
@@ -60,21 +60,6 @@ class TsSwagger {
   scanExpressApi(ast: parser.ParseResult<t.File>) {
     const methods: TsSwgMethod[] = [];
 
-    const getCommentValue = (label: string, comment: string, spacing?: boolean) => {
-      if (
-        comment
-          .replace(/\s+/g, "")
-          .toLowerCase()
-          .startsWith(label)
-      ) {
-        let value = spacing
-          ? comment
-          : comment.replace(/\s+/g, "");
-
-        return value.replace(label, "");
-      }
-    }
-
     const getResStatus = (comment: string) => {
       const status = comment.match(/\{(.*?)\}/);
       if (status) {
@@ -85,51 +70,80 @@ class TsSwagger {
         }
       }
       return;
-    }
+    };
 
-    const getMethodInfo = (comment: string) => {
-      const schema = getCommentValue("schema:", comment);
-      const description = getCommentValue("description:", comment, true);
-      const responseDescription = getCommentValue("response_description:", comment, true);
-      const errorInterfaceName = getCommentValue("error_schema:", comment);
-      const status = getResStatus(comment);
+    const getCommentValue = (label: string, comment: string, spacing?: boolean) => {
+      const result = comment.split(label)[1];
 
-      return {
-        ...schema ? { interfaceName: schema } : {},
-        ...description ? { description } : {},
-        ...responseDescription ? { responseDescription } : {},
-        ...status ? { resStates: status } : {},
-        ...errorInterfaceName ? { errorInterfaceName } : {}
-      };
-    }
+      return spacing ? result : result.replace(/\s+/g, "");
+    };
+
+    const getMethodInfo = (rows: string[]) => {
+      let methodInfo: TsSwgMethod = { name: "", path: "" };
+      for (const index in rows) {
+        const row = rows[index];
+        if (row.includes("@schema"))
+          methodInfo = {
+            ...methodInfo,
+            interfaceName: getCommentValue("@schema ", row)
+          };
+        else if (row.includes("@method"))
+          methodInfo = {
+            ...methodInfo,
+            name: getCommentValue("@method ", row).toLowerCase()
+          };
+        else if (row.includes("@route"))
+          methodInfo = {
+            ...methodInfo,
+            path: getCommentValue("@route ", row).toLowerCase()
+          };
+        else if (row.includes("@description"))
+          methodInfo = {
+            ...methodInfo,
+            description: getCommentValue("@description ", row, true)
+          };
+        else if (row.includes("@response_description"))
+          methodInfo = {
+            ...methodInfo,
+            responseDescription: getCommentValue("@response_description ", row, true)
+          };
+        else if (row.includes("@error_schema"))
+          methodInfo = {
+            ...methodInfo,
+            errorInterfaceName: getCommentValue("@error_schema ", row)
+          };
+        else if (row.includes("@status_code"))
+          _.merge(methodInfo, { resStates: getResStatus(row) })
+      }
+
+      return methodInfo;
+    };
+
+    const checkMethodName = (name?: string) => {
+      switch (name) {
+        case "get":
+        case "put":
+        case "post":
+        case "delete":
+          return true
+        default:
+          return false
+      }
+    };
 
     traverse(ast, {
       enter(path: any) {
-        if (
-          path.node.type === "ExpressionStatement" &&
-          (path.node.expression.callee.property.name === "get" ||
-            path.node.expression.callee.property.name === "post" ||
-            path.node.expression.callee.property.name === "delete" ||
-            path.node.expression.callee.property.name === "put")
-        ) {
-          let method: TsSwgMethod = {
-            name: path.node.expression.callee.property.name,
-            path: path.node.expression.arguments[0].value,
-          };
+        if (path.container.comments) {
+          const blockComments = path.container.comments;
 
-          path.node.expression.arguments[1]?.body?.body[0]?.leadingComments?.forEach(
-            (comment: any) => {
-              _.merge(method, getMethodInfo(comment.value));
+          blockComments?.forEach((singleBlock: any) => {
+            if (singleBlock.type === "CommentBlock") {
+              const rows = singleBlock.value.split(/\r\n|\r|\n/);
+              const method = getMethodInfo(rows);
+              if (checkMethodName(method.name) && method.path && method.description)
+                methods.push(method);
             }
-          );
-
-          path.node.expression.arguments[1]?.body?.innerComments?.forEach(
-            (comment: any) => {
-              _.merge(method, getMethodInfo(comment.value));
-            }
-          );
-
-          if (method.interfaceName) methods.push(method);
+          })
         }
       },
     });

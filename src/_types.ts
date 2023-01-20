@@ -1,5 +1,5 @@
 export interface TsSwgMethod {
-    name: 'get' | 'put' | 'post' | 'delete';
+    name: string;
     path: string;
     interfaceName?: string;
     description?: string;
