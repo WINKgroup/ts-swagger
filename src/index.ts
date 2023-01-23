@@ -6,11 +6,17 @@ import {
   TsSwgConfigServer
 } from "./_types";
 import _ from "lodash";
-import * as fs from 'fs';
+import * as fs from "fs";
 import * as parser from "@babel/parser";
 import traverse from "@babel/traverse";
-import * as t from '@babel/types';
+import * as t from "@babel/types";
 import { JSONFileError, JSONPathError, ApiPathError } from "./_errors";
+import {
+  checkMethodName,
+  getMethodInfo,
+  getVariableType,
+  isDate
+} from "./_utils";
 
 class TsSwagger {
   readonly tsSwgConfig: TsSwgConfig;
@@ -46,7 +52,7 @@ class TsSwagger {
           path.node.type === "TSInterfaceDeclaration" &&
           path.node.body.body[0].leadingComments?.some(
             (comment: any) =>
-              comment.value.replace(/\s+/g, "").toLowerCase() === "swagger"
+              comment.value.includes("@tsswagger")
           )
         ) {
           nodes.push(path.node);
@@ -60,76 +66,19 @@ class TsSwagger {
   scanExpressApi(ast: parser.ParseResult<t.File>) {
     const methods: TsSwgMethod[] = [];
 
-    const getCommentValue = (label: string, comment: string, spacing?: boolean) => {
-      if (
-        comment
-          .replace(/\s+/g, "")
-          .toLowerCase()
-          .startsWith(label)
-      ) {
-        let value = spacing
-          ? comment
-          : comment.replace(/\s+/g, "");
-
-        return value.replace(label, "");
-      }
-    }
-
-    const getResStatus = (comment: string) => {
-      const status = comment.match(/\{(.*?)\}/);
-      if (status) {
-        return {
-          [status[1]]: {
-            description: getCommentValue(`{${status[1]}}:`, comment, true) || ''
-          }
-        }
-      }
-      return;
-    }
-
-    const getMethodInfo = (comment: string) => {
-      const schema = getCommentValue("schema:", comment);
-      const description = getCommentValue("description:", comment, true);
-      const responseDescription = getCommentValue("response_description:", comment, true);
-      const errorInterfaceName = getCommentValue("error_schema:", comment);
-      const status = getResStatus(comment);
-
-      return {
-        ...schema ? { interfaceName: schema } : {},
-        ...description ? { description } : {},
-        ...responseDescription ? { responseDescription } : {},
-        ...status ? { resStates: status } : {},
-        ...errorInterfaceName ? { errorInterfaceName } : {}
-      };
-    }
-
     traverse(ast, {
       enter(path: any) {
-        if (
-          path.node.type === "ExpressionStatement" &&
-          (path.node.expression.callee.property.name === "get" ||
-            path.node.expression.callee.property.name === "post" ||
-            path.node.expression.callee.property.name === "delete" ||
-            path.node.expression.callee.property.name === "put")
-        ) {
-          let method: TsSwgMethod = {
-            name: path.node.expression.callee.property.name,
-            path: path.node.expression.arguments[0].value,
-          };
+        if (path.container.comments) {
+          const blockComments = path.container.comments;
 
-          path.node.expression.arguments[1]?.body?.body[0]?.leadingComments?.forEach(
-            (comment: any) => {
-              _.merge(method, getMethodInfo(comment.value));
+          blockComments?.forEach((singleBlock: any) => {
+            if (singleBlock.type === "CommentBlock") {
+              const rows = singleBlock.value.split(/\r\n|\r|\n/);
+              const method = getMethodInfo(rows);
+              if (checkMethodName(method.name) && method.path && method.description)
+                methods.push(method);
             }
-          );
-
-          path.node.expression.arguments[1]?.body?.innerComments?.forEach(
-            (comment: any) => {
-              _.merge(method, getMethodInfo(comment.value));
-            }
-          );
-
-          if (method.interfaceName) methods.push(method);
+          })
         }
       },
     });
@@ -148,7 +97,8 @@ class TsSwagger {
         description,
         responseDescription,
         resStates,
-        errorInterfaceName
+        errorInterfaceName,
+        urlParameters
       } = method;
 
       const responseObj = _.cloneDeep(resStates);
@@ -173,33 +123,34 @@ class TsSwagger {
         _.merge(responseObj, obj);
       }
 
-      const id = path.includes(":") &&
-        path.substring(path.indexOf(':') + 1);
-      const methodPath = id
-        ? path.replace(`:${id}`, `{${id}}`)
-        : path;
+      let methodPath = path;
+
+      const parameters = urlParameters.map(qp => {
+        if (qp.parameterType === "path") {
+          methodPath = methodPath.replace(`:${qp.name}`, `{${qp.name}}`);
+        }
+
+        return path.includes(`:${qp.name}`) || qp.parameterType === "query" ? {
+          in: qp.parameterType,
+          name: qp.name,
+          schema: {
+            type: qp.type === "number" ? qp.type : "string"
+          },
+          description: qp.description,
+          ...qp.parameterType === "path" ? { required: true } : {}
+        } : {}
+
+      });
 
       const newJson = {
         [methodPath]: {
           [name]: {
             tags: [interfaceName],
             description: `${description ? description : ""}`,
-            ...(id
-              ? {
-                parameters: [
-                  {
-                    name: `${id}`,
-                    in: "path",
-                    schema: {
-                      type: "string",
-                    },
-                    required: true,
-                    description: `The ${interfaceName} id`,
-                  },
-                ],
-              }
-              : {}),
-            ...name === 'post' || name === 'put' ? {
+            parameters: [
+              ...parameters
+            ],
+            ...name === "post" || name === "put" ? {
               requestBody: {
                 required: true,
                 content: {
@@ -217,7 +168,7 @@ class TsSwagger {
                 description: `${responseDescription ? responseDescription : ""}`,
                 content: {
                   "application/json": {
-                    ...name === 'get' && !path.includes(':') ? {
+                    ...name === "get" && !path.includes(":") ? {
                       schema: {
                         type: `${name === "get" ? "array" : "object"}`,
                         items: {
@@ -246,37 +197,6 @@ class TsSwagger {
   getDataForSchemas(nodes: t.TSInterfaceDeclaration[]): TsSwgSchemasData[] {
     const schemasData: TsSwgSchemasData[] = [];
 
-    const getVariableType = (type: string) => {
-      switch (type) {
-        case "TSBooleanKeyword":
-          return "boolean"
-        case "TSNumberKeyword":
-          return "number"
-        case "TSArrayType":
-          return "array"
-        case "TSObjectKeyword":
-          return "object"
-        default:
-          return "string"
-      }
-    };
-
-    const isDate = (body: t.TSTypeElement) => {
-      return (
-        body.typeAnnotation?.typeAnnotation.type === "TSTypeReference" &&
-        "typeName" in body.typeAnnotation?.typeAnnotation &&
-        "name" in body.typeAnnotation?.typeAnnotation.typeName &&
-        body.typeAnnotation?.typeAnnotation.typeName.name === "Date"
-      ) ||
-        (
-          body.typeAnnotation?.typeAnnotation &&
-          "elementType" in body.typeAnnotation?.typeAnnotation &&
-          "typeName" in body.typeAnnotation?.typeAnnotation.elementType &&
-          "name" in body.typeAnnotation?.typeAnnotation.elementType.typeName &&
-          body.typeAnnotation?.typeAnnotation.elementType.typeName.name === "Date"
-        )
-    }
-
     nodes.forEach(node => {
       const variables: TsSwgVariable[] = [];
       node.body.body.forEach(body => {
@@ -284,7 +204,7 @@ class TsSwagger {
           if ("name" in body.key) {
             let type = getVariableType(body.typeAnnotation?.typeAnnotation.type as string);
             let arrayType: string | undefined = undefined;
-            if (type === 'array') {
+            if (type === "array") {
               if (body.typeAnnotation?.typeAnnotation && "elementType" in body.typeAnnotation?.typeAnnotation)
                 arrayType = getVariableType(body.typeAnnotation?.typeAnnotation.elementType.type);
             }
@@ -383,7 +303,7 @@ class TsSwagger {
   }
 
   checkConfig(tsSwgConfig: TsSwgConfig) {
-    const correctKeys = ['pathList', 'apiName', 'version'];
+    const correctKeys = ["pathList", "apiName", "version"];
 
     for (const key in correctKeys) {
       if (!tsSwgConfig.hasOwnProperty(correctKeys[key]))

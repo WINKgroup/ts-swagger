@@ -1,6 +1,6 @@
 # Ts-Swagger
 
-Ts-Swagger is a Javascript library that converts Typescript interfaces and Express APIs into OpenAPI/Swagger JSON.
+Ts-Swagger is a Javascript library that converts Typescript interfaces and APIs into OpenAPI/Swagger JSON.
 
 Ts-Swagger library scans the Typescript files of interest and converts interfaces and APIs marked with specific comments. As a result it provides a JSON composed according to the OpenAPI 3 specification. Optionally generate a file with a .json extension in the project root.
 
@@ -21,7 +21,7 @@ This file **must be placed at the root** of your project folder.
     "pathList": [
         "./model/User.ts",
         "./model/Cart.ts",
-        "./routes/api/user.js"
+        "./routes/api/user.ts"
     ],
     "apiName": "",
     "version": "",
@@ -37,13 +37,17 @@ This file **must be placed at the root** of your project folder.
 
 In order for the library to work, you need to add a **comment** inside every interface that you want to generate Swagger for.
 ```ts
-// swagger
+/** 
+ * @tsswagger 
+ */
 ```
 ```ts
 
 // This interface will be converted 
 export interface User {
-    // swagger
+    /** 
+     * @tsswagger 
+     */
     name: string,
     id: number
 }
@@ -58,37 +62,105 @@ export interface Cart {
 ```
 
 
-Your **APIs** will also need a comment that specifies **which interface they're using**, otherwise the swagger for them won't be generated.
+Your **APIs** will also need a comment that specifies **which interface they're using, request method and route**, otherwise the swagger for them won't be generated.
 
 ```js
+/** 
+ * @schema User
+ * @request GET
+ * @route /users
+ */
+
 app.get('/users', function(req, res) {
-    // schema: User
     res.send(Users);
 });
 ```
+
 
 Other optional comments are the description of the API and its response.
 
 ```js
+/** 
+ * @schema User
+ * @request GET
+ * @route /users
+ * @description Get all users
+ * @response_description Array of User
+ */
+
 app.get('/users', function(req, res) {
-    // schema: User
-    // description: Get all users
-    // response_description: Array of users
     res.send(Users);
 });
 ```
 
+
 With the following syntax you can also add the description of status codes other than 200 and if you want with an optional comment, you can provide a reference to the Typescript interface that describes the related response.
 
 ```js
+/** 
+ * @schema User
+ * @request GET
+ * @route /users/:userId
+ * @status_code {404} Not found
+ * @status_code {500} Some server error
+ * @error_schema Error
+ */
+
 app.get('/users/:userId', function(req, res) {
-    // schema: User
-    // {404}: Not found
-    // {500}: Some server error
-    // error_schema: Error
     res.send(User);
 });
 ```
+
+
+If one or more path parameters are present in the route (for example a user id) it's necessary to specify the relative information with the following syntax (it's important to respect the order of the elements in the comment). The name and type (number or string) are required.
+
+```js
+/** 
+ * @path_parameter {name} [type] Description
+ */
+```
+
+```js
+// Example:
+
+/** 
+ * @schema User
+ * @request GET
+ * @route /api/organizations/:id/users/:userId
+ * @path_parameter {id} [number] The organization ID
+ * @path_parameter {userId} [number] The user ID
+ */
+
+app.get('/api/organizations/:id/users/:userId', (req, res) => {
+    res.send(User);
+});
+```
+
+
+Similarly to add query parameters you can do:
+
+```js
+/** 
+ * @query_parameter {name} [type] Description
+ */
+```
+
+```js
+// Example:
+
+/** 
+ * @schema User
+ * @request GET
+ * @route /users
+ * @query_parameter {start} [number] Starting element
+ * @query_parameter {limit} [number] Number of user to return
+ */
+
+app.get('/users', function(req, res) {
+    res.send(Users);
+});
+```
+
 
 The library exposes a method called **getSwagger()** that returns the Swagger JSON. If a **filename** is provided as an argument, a new file containing the JSON will be created in the root of your project.
 
