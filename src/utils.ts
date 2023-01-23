@@ -1,5 +1,5 @@
 import { TsSwgMethod } from "./_types";
-import * as t from '@babel/types';
+import * as t from "@babel/types";
 import _ from "lodash";
 
 export const getResStatus = (comment: string) => {
@@ -7,7 +7,7 @@ export const getResStatus = (comment: string) => {
     if (status) {
         return {
             [status[1]]: {
-                description: getCommentValue(`{${status[1]}}`, comment, true) || ''
+                description: getCommentValue(`{${status[1]}}`, comment, true) || ""
             }
         }
     }
@@ -20,7 +20,7 @@ export const getCommentValue = (label: string, comment: string, spacing?: boolea
     return spacing ? result : result.replace(/\s+/g, "");
 };
 
-export const getQueryParameter = (comment: string) => {
+export const getParameter = (comment: string, parameterType: "path" | "query") => {
     const name = comment.match(/\{(.*?)\}/);
     const type = comment.match(/\[(.*?)\]/);
 
@@ -28,13 +28,19 @@ export const getQueryParameter = (comment: string) => {
         return {
             name: name[1],
             type: type[1],
-            description: getCommentValue(`[${type[1]}]`, comment, true) || ''
+            description: getCommentValue(`[${type[1]}]`, comment, true) || "",
+            parameterType
         }
     }
 };
 
 export const getMethodInfo = (rows: string[]) => {
-    let methodInfo: TsSwgMethod = { name: "", path: "", queryParameters: [] };
+    let methodInfo: TsSwgMethod = {
+        name: "",
+        path: "",
+        urlParameters: []
+    };
+
     for (const index in rows) {
         const row = rows[index];
         if (row.includes("@schema"))
@@ -50,7 +56,7 @@ export const getMethodInfo = (rows: string[]) => {
         else if (row.includes("@route"))
             methodInfo = {
                 ...methodInfo,
-                path: getCommentValue("@route ", row).toLowerCase()
+                path: getCommentValue("@route ", row)
             };
         else if (row.includes("@description"))
             methodInfo = {
@@ -70,8 +76,12 @@ export const getMethodInfo = (rows: string[]) => {
         else if (row.includes("@status_code"))
             _.merge(methodInfo, { resStates: getResStatus(row) });
         else if (row.includes("@query_parameter")) {
-            const queryParameter = getQueryParameter(row);
-            queryParameter && methodInfo.queryParameters?.push(queryParameter);
+            const queryParameter = getParameter(row, "query");
+            queryParameter && methodInfo.urlParameters?.push(queryParameter);
+        }
+        else if (row.includes("@path_parameter")) {
+            const pathParameter = getParameter(row, "path");
+            pathParameter && methodInfo.urlParameters?.push(pathParameter);
         }
     }
 

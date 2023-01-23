@@ -6,10 +6,10 @@ import {
   TsSwgConfigServer
 } from "./_types";
 import _ from "lodash";
-import * as fs from 'fs';
+import * as fs from "fs";
 import * as parser from "@babel/parser";
 import traverse from "@babel/traverse";
-import * as t from '@babel/types';
+import * as t from "@babel/types";
 import { JSONFileError, JSONPathError, ApiPathError } from "./_errors";
 import {
   checkMethodName,
@@ -98,7 +98,7 @@ class TsSwagger {
         responseDescription,
         resStates,
         errorInterfaceName,
-        queryParameters
+        urlParameters
       } = method;
 
       const responseObj = _.cloneDeep(resStates);
@@ -123,21 +123,23 @@ class TsSwagger {
         _.merge(responseObj, obj);
       }
 
-      const id = path.includes(":") &&
-        path.substring(path.indexOf(':') + 1);
-      const methodPath = id
-        ? path.replace(`:${id}`, `{${id}}`)
-        : path;
+      let methodPath = path;
 
-      const parameters = queryParameters.map(qp => {
-        return {
-          in: "query",
+      const parameters = urlParameters.map(qp => {
+        if (qp.parameterType === "path") {
+          methodPath = methodPath.replace(`:${qp.name}`, `{${qp.name}}`);
+        }
+
+        return path.includes(`:${qp.name}`) || qp.parameterType === "query" ? {
+          in: qp.parameterType,
           name: qp.name,
           schema: {
             type: qp.type === "number" ? qp.type : "string"
           },
-          description: qp.description
-        }
+          description: qp.description,
+          ...qp.parameterType === "path" ? { required: true } : {}
+        } : {}
+
       });
 
       const newJson = {
@@ -145,23 +147,10 @@ class TsSwagger {
           [name]: {
             tags: [interfaceName],
             description: `${description ? description : ""}`,
-            ...(id
-              ? {
-                parameters: [
-                  {
-                    name: `${id}`,
-                    in: "path",
-                    schema: {
-                      type: "string",
-                    },
-                    required: true,
-                    description: `The ${interfaceName} id`,
-                  },
-                  ...parameters
-                ],
-              }
-              : { parameters }),
-            ...name === 'post' || name === 'put' ? {
+            parameters: [
+              ...parameters
+            ],
+            ...name === "post" || name === "put" ? {
               requestBody: {
                 required: true,
                 content: {
@@ -179,7 +168,7 @@ class TsSwagger {
                 description: `${responseDescription ? responseDescription : ""}`,
                 content: {
                   "application/json": {
-                    ...name === 'get' && !path.includes(':') ? {
+                    ...name === "get" && !path.includes(":") ? {
                       schema: {
                         type: `${name === "get" ? "array" : "object"}`,
                         items: {
@@ -215,7 +204,7 @@ class TsSwagger {
           if ("name" in body.key) {
             let type = getVariableType(body.typeAnnotation?.typeAnnotation.type as string);
             let arrayType: string | undefined = undefined;
-            if (type === 'array') {
+            if (type === "array") {
               if (body.typeAnnotation?.typeAnnotation && "elementType" in body.typeAnnotation?.typeAnnotation)
                 arrayType = getVariableType(body.typeAnnotation?.typeAnnotation.elementType.type);
             }
@@ -314,7 +303,7 @@ class TsSwagger {
   }
 
   checkConfig(tsSwgConfig: TsSwgConfig) {
-    const correctKeys = ['pathList', 'apiName', 'version'];
+    const correctKeys = ["pathList", "apiName", "version"];
 
     for (const key in correctKeys) {
       if (!tsSwgConfig.hasOwnProperty(correctKeys[key]))
