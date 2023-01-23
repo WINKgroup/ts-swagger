@@ -16,7 +16,7 @@ import {
   getMethodInfo,
   getVariableType,
   isDate
-} from "./utils";
+} from "./_utils";
 
 class TsSwagger {
   readonly tsSwgConfig: TsSwgConfig;
