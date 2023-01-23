@@ -1,6 +1,6 @@
 # Ts-Swagger
 
-Ts-Swagger is a Javascript library that converts Typescript interfaces and Express APIs into OpenAPI/Swagger JSON.
+Ts-Swagger is a Javascript library that converts Typescript interfaces and APIs into OpenAPI/Swagger JSON.
 
 Ts-Swagger library scans the Typescript files of interest and converts interfaces and APIs marked with specific comments. As a result it provides a JSON composed according to the OpenAPI 3 specification. Optionally generate a file with a .json extension in the project root.
 
@@ -112,7 +112,32 @@ app.get('/users/:userId', function(req, res) {
 ```
 
 
-To add query parameters you can use the following syntax (The order of the elements is mandatory). The name and type (number or string) are required.
+If one or more path parameters are present in the route (for example a user id) it's necessary to specify the relative information with the following syntax (it's important to respect the order of the elements in the comment). The name and type (number or string) are required.
+
+```js
+/** 
+ * @path_parameter {name} [type] Description
+ */
+```
+
+```js
+// Example:
+
+/** 
+ * @schema User
+ * @request GET
+ * @route /api/organizations/:id/users/:userId
+ * @path_parameter {id} [number] The organization ID
+ * @path_parameter {userId} [number] The user ID
+ */
+
+app.get('/api/organizations/:id/users/:userId', (req, res) => {
+    res.send(User);
+});
+```
+
+
+Similarly to add query parameters you can do:
 
 ```js
 /** 
@@ -120,9 +145,9 @@ To add query parameters you can use the following syntax (The order of the eleme
  */
 ```
 
-Example:
-
 ```js
+// Example:
+
 /** 
  * @schema User
  * @request GET
